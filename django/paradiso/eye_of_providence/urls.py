@@ -1,12 +1,10 @@
 from django.urls import path
-
 from . import views
 
 app_name = "eye_of_providence"
 
 urlpatterns = [
-    path("test", views.test, name="test"),
-    path("", views.index, name="index"),
+    path("old", views.index, name="index"),
     path("manage_guests", views.ManageGuests.as_view(), name="guest-manage"),
     path("manage_events", views.ManageEvents.as_view(), name="event-manage"),
     path("view_guest/<str:pk>", views.GuestDetailView.as_view(), name="detail-guest"),

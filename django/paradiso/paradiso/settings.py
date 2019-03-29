@@ -65,6 +65,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "storages",
     "rest_framework",
+    "jacobs_ladder",
 ]
 
 MIDDLEWARE = [
