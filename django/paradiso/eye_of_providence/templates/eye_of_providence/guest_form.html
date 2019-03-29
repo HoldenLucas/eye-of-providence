@@ -1,0 +1,26 @@
+<form method="post" enctype="multipart/form-data">{% csrf_token %}
+  {{ form.as_p }}
+  <button type="submit">Submit</button>
+</form>
+
+<table border="1">
+  <tbody>
+    {% for guest in guests %}
+      <tr>
+        <td>
+          <img src="{{ guest.photo.url }}" style="width:100px;height:100px;">
+        </td>
+        <td>{{ guest.name }}</td>
+        <td><a href="{% url "eye_of_providence:delete-guest" guest.pk %}">delete</a></td>
+      </tr>
+    {% empty %}
+      <tr>
+        <td colspan="3">No data.</td>
+      </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<br>
+<br>
+<a href="{% url "eye_of_providence:index"%}">index</a>

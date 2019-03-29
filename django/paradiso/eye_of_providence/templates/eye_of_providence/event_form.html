@@ -1,0 +1,29 @@
+<form method="post" enctype="multipart/form-data">{% csrf_token %}
+  {{ form.as_p }}
+  <button type="submit">Submit</button>
+</form>
+
+<table border="1">
+  <tbody>
+    {% for event in events %}
+      <tr>
+        <td>
+          <video width="320" height="240" controls>
+            <source src="{{ event.video.url }}" type="video/mp4">
+              Your browser does not support the video tag.
+          </video>
+        </td>
+        <td>{{ event.date }}</td>
+        <td><a href="{% url "eye_of_providence:event-delete" event.pk %}">delete</a></td>
+      </tr>
+    {% empty %}
+      <tr>
+        <td colspan="3">No data.</td>
+      </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<br>
+<br>
+<a href="{% url "eye_of_providence:index"%}">index</a>
