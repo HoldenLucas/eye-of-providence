@@ -24,14 +24,9 @@ AWS_STORAGE_BUCKET_NAME = config("AWS_STORAGE_BUCKET_NAME")
 
 AWS_S3_CUSTOM_DOMAIN = "{}.s3.amazonaws.com".format(AWS_STORAGE_BUCKET_NAME)
 AWS_S3_OBJECT_PARAMETERS = {"CacheControl": "max-age=86400"}
-# path to be prepended to all uploads
-# AWS_LOCATION = "static"
 
 STATICFILES_DIRS = [os.path.join(BASE_DIR, "eye_of_providence/static")]
-# STATIC_URL = "https://{}/{}/".format(AWS_S3_CUSTOM_DOMAIN, AWS_LOCATION)
 STATIC_URL = "https://{}/".format(AWS_S3_CUSTOM_DOMAIN)
-# STATICFILES_STORAGE = "paradiso.storage_backends.MediaStorage"
-# STATICFILES_STORAGE = "storages.backends.s3boto3.S3Boto3Storage"
 AWS_FACE_LOCATION = "faces"
 DEFAULT_FACE_STORAGE = "paradiso.storage_backends.FaceStorage"
 AWS_EVENT_LOCATION = "events"
@@ -65,7 +60,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "storages",
     "rest_framework",
-    "jacobs_ladder",
+    # "jacobs_ladder",
 ]
 
 MIDDLEWARE = [

@@ -1,0 +1,46 @@
+{% include "eye_of_providence/add_guest_button.html" %}
+
+
+<script>
+$('document').ready(function(){
+    $("#showModal").click(function () {
+    $(".modal").addClass("is-active");
+    });
+
+    $(".modal-close").click(function () {
+    $(".modal").removeClass("is-active");
+    });
+});
+</script>
+  <!-- {% for guest in guests %}
+      {{ guest.photo }}
+    {% endfor %} -->
+  <!-- <h1 class="title">
+    Hello World
+  </h1>
+  <p class="subtitle">
+    My first website with <strong>Bulma</strong>!
+  </p> -->
+
+
+  <div class="container" id="app">
+    <div class="modal">
+      <div class="modal-background"></div>
+      <div class="modal-content">
+        <!-- Any other Bulma elements you want -->
+        <table>
+          <tr>
+            <td>Jhon</td>
+            <td>Hi</td>
+          </tr>
+        </table>
+        <input type="text" class="input" />
+      </div>
+      <button class="modal-close"></button>
+    </div>
+    <textarea style="position:absolute;z-index: 9999" name="" id="" cols="30" rows="2"></textarea>
+    <br /><br /><br />
+    <p>
+      <button class="button" id="showModal">Show</button>
+    </p>
+  </div>

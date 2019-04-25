@@ -1,4 +1,16 @@
-<a href="{% url 'eye_of_providence:guest-manage' %}">Manage Guests</a>
-<br>
-<br>
-<a href="{% url 'eye_of_providence:event-manage' %}">Manage Events</a>
+{% extends "eye_of_providence/base.html" %}
+
+{% block title %}
+Index
+{% endblock title %}
+
+{% block content %}
+  <div class="columns">
+    <div class="column box">
+      First column
+    </div>
+    <div class="column box">
+      Second column
+    </div>
+  </div>
+{% endblock content %}

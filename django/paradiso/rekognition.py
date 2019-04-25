@@ -4,7 +4,6 @@ import sys
 import pprint
 import decouple
 
-
 class VideoDetect:
     jobId = ""
     rek = boto3.client("rekognition")
@@ -33,9 +32,8 @@ class VideoDetect:
         )
 
     # TODO: figure out this faceid shit
-    def deleteFace(self, name: str):
-        name = name.replace(" ", "_")
-        return self.rek.delete_faces(CollectionId="guests", FaceIds=[name])
+    def deleteFace(self, id):
+        return self.rek.delete_faces(CollectionId=self.collectionId, FaceIds=[str(id)])
 
     def listFaces(self):
         return self.rek.list_faces(CollectionId=self.collectionId)
@@ -45,7 +43,8 @@ class VideoDetect:
         jobFound = False
         sqs = boto3.client("sqs")
 
-        print(event_date)
+        matches_stats = []
+
         response = self.rek.start_face_search(
             Video={
                 "S3Object": {
@@ -87,7 +86,7 @@ class VideoDetect:
                         print("Matching Job Found:" + rekMessage["JobId"])
                         jobFound = True
 
-                        self.GetResultsFaceSearchCollection(rekMessage["JobId"])
+                        matches_stats += self.GetResultsFaceSearchCollection(rekMessage["JobId"])
 
                         sqs.delete_message(
                             QueueUrl=self.queueUrl,
@@ -106,10 +105,12 @@ class VideoDetect:
                     )
 
         print("done")
+        return matches_stats
 
     def GetResultsFaceSearchCollection(self, jobId):
         maxResults = 10
         paginationToken = ""
+        matches = []
 
         finished = False
 
@@ -118,18 +119,13 @@ class VideoDetect:
                 JobId=jobId, MaxResults=maxResults, NextToken=paginationToken
             )
 
-            print(response["VideoMetadata"]["Codec"])
-            print(str(response["VideoMetadata"]["DurationMillis"]))
-            print(response["VideoMetadata"]["Format"])
-            print(response["VideoMetadata"]["FrameRate"])
-
             for personMatch in response["Persons"]:
                 print("Person Index: " + str(personMatch["Person"]["Index"]))
                 print("Timestamp: " + str(personMatch["Timestamp"]))
 
                 if "FaceMatches" in personMatch:
                     for faceMatch in personMatch["FaceMatches"]:
-                        # print("Face ID: " + faceMatch["Face"]["FaceId"])
+                        matches += faceMatch["Face"]["ExternalImageId"]
                         print("Face ID: " + faceMatch["Face"]["ExternalImageId"])
                         print("Similarity: " + str(faceMatch["Similarity"]))
                 print()
@@ -139,9 +135,11 @@ class VideoDetect:
                 finished = True
             print()
 
+        return matches
 
-if __name__ == "__main__":
-    analyzer = VideoDetect()
-    # pprint.pprint(analyzer.makeCollection())
-    pprint.pprint(analyzer.listFaces())
-    # analyzer.main()
+
+# if __name__ == "__main__":
+#     analyzer = VideoDetect()
+#     pprint.pprint(analyzer.makeCollection())
+#     pprint.pprint(analyzer.listFaces()["Faces"])
+#     analyzer.main()
