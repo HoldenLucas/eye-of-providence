@@ -1,16 +1,336 @@
-{% extends "eye_of_providence/base.html" %}
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>THE EYE</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bulma/0.7.4/css/bulma.min.css">
+    <script defer src="https://use.fontawesome.com/releases/v5.3.1/js/all.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
 
-{% block title %}
-Index
-{% endblock title %}
+    <style>
+      .test {
+        object-fit: cover;
+        border-radius: 50%;
+      },
+    </style>
+  </head>
 
-{% block content %}
-  <div class="columns">
-    <div class="column box">
-      First column
+  <body>
+    <script type="text/x-template" id="event-list-template">
+      <div class="box">
+          <table class="table is-hoverable is-fullwidth is-striped">
+              <tbody>
+              <tr v-for="event in events">
+
+                  <td :class="{'is-selected': selectedEvent.id === event.id}" @click="returnEvent(event)">
+
+                    ${event.name}
+
+                    <button
+                      v-if="selectedEvent.potential_faces === null && selectedEvent.id === event.id"
+                      class="button is-rounded is-warning is-inverted"
+                      @click="deleteEvent">
+                      <span class="icon">
+                        <i class="fas fa-eye"></i>
+                      </span>
+                    </button>
+
+                    <button
+                      v-if="selectedEvent.id === event.id"
+                      class="button is-pulled-right is-rounded is-danger is-inverted"
+                      @click="deleteEvent">
+                      DEL
+                    </button>
+                  </td>
+              </tr>
+            </tbody>
+          </table>
+
+        <create-event-form @uploaded="getEvents"></create-event-form>
+
+      </div>
+    </script>
+
+    <script type="text/x-template" id="info-grid-template">
+      <div class="box columns is-multiline is-mobile">
+        <div class="tile is-ancestor">
+          <div class="tile is-parent is-vertical">
+
+            <!-- this has to be inline for some reason -->
+            <div
+              v-if="selectedVideo"
+              :key="selectedVideo"
+              class="tile is-child"
+              style="position: relative;padding-bottom: 56.25%; /* 16:9 */padding-top: 25px;height: 0;background: black">
+              <video
+                style="position: absolute;top: 0;left: 0;width: 100%;height: 100%;"
+                controls
+              >
+                <source :src="selectedVideo" type="video/mp4">
+              </video>
+            </div>
+
+            <div class="tile is-child">
+              <template
+                v-if="selectedGuests.length == 0 && selectedVideo == undefined"
+              >
+                <figure
+                  v-for="guest in guests"
+                  class="column is-one-quarter">
+                    <img class="image test is-128x128" :src="guest.photo">
+                </figure>
+              </template>
+
+              <template
+                v-else
+              >
+                <figure
+                  v-for="guest in guests"
+                  class="column is-one-quarter">
+                    <img v-if="selectedGuests.includes(guest.name)" class="image test is-128x128" :src="guest.photo">
+                </figure>
+              </template>
+            </div>
+
+          </div>
+        </div>
+
+        <create-guest-form @uploaded="getGuests"></create-guest-form>
+      </div>
+    </script>
+
+    <script type="text/x-template" id="create-event-form-template">
+      <div class="container">
+        <div class="">
+          <input class="input" v-model="newEvent.name" placeholder="Event Name">
+          <input class="file"type="file" id="file" ref="file" @change="fetchVideo">
+
+          <button :class="{'is-loading': uploading}"class="button is-primary" @click="uploadEvent">
+            Submit
+          </button>
+        </div>
+      </div>
+    </script>
+
+
+    <script type="text/x-template" id="create-guest-form-template">
+      <div class="container">
+        <div class="">
+          <input class="input" v-model="newGuest.name" placeholder="Guest Name">
+          <input class="file"type="file" id="file" ref="photo" @change="fetchPhoto">
+
+          <button :class="{'is-loading': uploading}"class="button is-primary" @click="uploadGuest">
+            Submit
+          </button>
+        </div>
+      </div>
+    </script>
+
+    <!-- VUE APP -->
+    <div class="container" id="app">
+      <!-- hero -->
+      <section class="hero has-background-grey-lighter">
+        <div class="hero-body">
+          <div class="container">
+            <h1 class="title">
+              THE EYE OF PROVIDENCE
+            </h1>
+          </div>
+        </div>
+      </section>
+
+
+      <section class="section">
+        <div class="container">
+          <div class="columns">
+
+            <div class="column is-one-third">
+              <event-list @select="selectEvent"></event-list>
+            </div>
+
+            <div class="column">
+              <info-grid
+                :selected-video="selectedEvent.video"
+                :selected-guests="selectedEvent.known_guests"
+                >
+              </info-grid>
+
+            </div>
+          </div>
+        </div>
+      </section>
     </div>
-    <div class="column box">
-      Second column
-    </div>
-  </div>
-{% endblock content %}
+
+    <!-- VUE SRC -->
+    <script type="application/javascript">
+
+      Vue.component('create-event-form', {
+        template: '#create-event-form-template',
+        delimiters: ['${','}'],
+        data () {
+          return {
+            newEvent: { 'name': null, 'video': null },
+            uploading: false,
+          }
+        },
+        methods: {
+          fetchVideo: function() {
+            this.newEvent.video = this.$refs.file.files[0]
+          },
+          uploadEvent: async function() {
+            this.uploading = true;
+
+            let formData = new FormData();
+            formData.append('name', this.newEvent.name);
+            formData.append('video', this.newEvent.video);
+
+            try{
+              await axios.post( '/api/event/',
+                formData,
+                {
+                  headers: {
+                    'Content-Type': 'multipart/form-data'
+                  }
+                }
+              )
+            } catch(error) {
+              console.error(error)
+            }
+            this.$emit("uploaded")
+            this.uploading = false
+          },
+        },
+      });
+
+
+      Vue.component('create-guest-form', {
+        template: '#create-guest-form-template',
+        delimiters: ['${','}'],
+        data () {
+          return {
+            newGuest: { 'name': null, 'photo': null },
+            uploading: false,
+          }
+        },
+        methods: {
+          fetchPhoto: function() {
+            this.newGuest.photo = this.$refs.photo.files[0]
+          },
+          uploadGuest: async function() {
+            this.uploading = true;
+
+            let formData = new FormData();
+            formData.append('name', this.newGuest.name);
+            formData.append('photo', this.newGuest.photo);
+
+            try{
+              await axios.post( '/api/guest/',
+                formData,
+                {
+                  headers: {
+                    'Content-Type': 'multipart/form-data'
+                  }
+                }
+              )
+            } catch(error) {
+              console.error(error)
+            }
+            this.$emit("uploaded")
+            this.uploading = false
+          },
+        },
+      });
+
+
+      Vue.component('event-list', {
+        template: '#event-list-template',
+        delimiters: ['${','}'],
+        data () {
+          return {
+            events: [],
+            selectedEvent: {id: null},
+          }
+        },
+        mounted () {
+          this.getEvents()
+        },
+        methods: {
+          getEvents: async function() {
+            try {
+              const response = await axios.get('/api/event');
+              this.events = response.data;
+            } catch (error) {
+              console.error(error);
+            }
+          },
+          deleteEvent: async function() {
+            const response = await axios.delete('/api/event/' + this.selectedEvent.id)
+            this.selectedEvent = {id: null}
+            this.getEvents()
+          },
+          returnEvent: function(event) {
+            if (this.selectedEvent == event){
+              this.selectedEvent = {known_guests: []}
+            } else {
+              this.selectedEvent = event;
+            }
+              this.$emit('select', this.selectedEvent)
+          }
+        },
+      })
+
+      Vue.component('info-grid', {
+        template: '#info-grid-template',
+        delimiters: ['${','}'],
+        props: {
+          selectedGuests: Array,
+          selectedVideo: String,
+        },
+        data () {
+          return {
+            guests: []
+          }
+        },
+        mounted () {
+          this.getGuests()
+        },
+        methods: {
+          getGuests: async function() {
+            try {
+              const response = await axios.get('/api/guest');
+              this.guests = response.data;
+            } catch (error) {
+              console.error(error);
+            }
+          },
+        }
+      })
+
+      new Vue({
+        el: '#app',
+        delimiters: ['${','}'],
+        data () {
+          return {
+            selectedEvent: {known_guests: []},
+          }
+        },
+        methods: {
+          getGuests: async function() {
+            try {
+              const response = await axios.get('/api/guest');
+              this.guests = response.data;
+            } catch (error) {
+              console.error(error);
+            }
+          },
+          selectEvent: function(event) {
+            this.selectedEvent = event
+          },
+
+        },
+      });
+    </script>
+  </body>
+</html>

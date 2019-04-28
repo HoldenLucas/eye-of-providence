@@ -31,7 +31,6 @@ class VideoDetect:
             ExternalImageId=name,
         )
 
-    # TODO: figure out this faceid shit
     def deleteFace(self, id):
         return self.rek.delete_faces(CollectionId=self.collectionId, FaceIds=[str(id)])
 
@@ -42,8 +41,6 @@ class VideoDetect:
 
         jobFound = False
         sqs = boto3.client("sqs")
-
-        matches_stats = []
 
         response = self.rek.start_face_search(
             Video={
@@ -86,7 +83,7 @@ class VideoDetect:
                         print("Matching Job Found:" + rekMessage["JobId"])
                         jobFound = True
 
-                        matches_stats += self.GetResultsFaceSearchCollection(rekMessage["JobId"])
+                        matches_stats = self.GetResultsFaceSearchCollection(rekMessage["JobId"])
 
                         sqs.delete_message(
                             QueueUrl=self.queueUrl,
@@ -110,7 +107,8 @@ class VideoDetect:
     def GetResultsFaceSearchCollection(self, jobId):
         maxResults = 10
         paginationToken = ""
-        matches = []
+        matches = set()
+        total = set()
 
         finished = False
 
@@ -120,12 +118,17 @@ class VideoDetect:
             )
 
             for personMatch in response["Persons"]:
+
+                total.add(personMatch["Person"]["Index"])
+
                 print("Person Index: " + str(personMatch["Person"]["Index"]))
                 print("Timestamp: " + str(personMatch["Timestamp"]))
 
                 if "FaceMatches" in personMatch:
                     for faceMatch in personMatch["FaceMatches"]:
-                        matches += faceMatch["Face"]["ExternalImageId"]
+
+                        matches.add(faceMatch["Face"]["ExternalImageId"])
+
                         print("Face ID: " + faceMatch["Face"]["ExternalImageId"])
                         print("Similarity: " + str(faceMatch["Similarity"]))
                 print()
@@ -135,11 +138,11 @@ class VideoDetect:
                 finished = True
             print()
 
-        return matches
+        return (matches, len(total))
 
 
-# if __name__ == "__main__":
-#     analyzer = VideoDetect()
-#     pprint.pprint(analyzer.makeCollection())
-#     pprint.pprint(analyzer.listFaces()["Faces"])
+if __name__ == "__main__":
+    analyzer = VideoDetect()
+    pprint.pprint(analyzer.makeCollection())
+    pprint.pprint(analyzer.listFaces()["Faces"])
 #     analyzer.main()

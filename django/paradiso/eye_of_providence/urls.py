@@ -1,12 +1,11 @@
-from django.urls import path
+from django.urls import path, include
 from . import views
+from .routers import router
+from django.views.generic import TemplateView
 
 app_name = "eye_of_providence"
 
 urlpatterns = [
-    path("", views.index, name="index"),
-    path("api/guest/", views.GuestListCreate.as_view()),
-    path("api/guest/<str:pk>", views.GuestDetail.as_view()),
-    path("api/event/", views.EventListCreate.as_view()),
-    path("api/event/<str:pk>", views.EventDetail.as_view()),
+    path("api/", include(router.urls)),
+    path("", TemplateView.as_view(template_name="eye_of_providence/index.html")),
 ]

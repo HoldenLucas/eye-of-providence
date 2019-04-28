@@ -25,7 +25,7 @@ AWS_STORAGE_BUCKET_NAME = config("AWS_STORAGE_BUCKET_NAME")
 AWS_S3_CUSTOM_DOMAIN = "{}.s3.amazonaws.com".format(AWS_STORAGE_BUCKET_NAME)
 AWS_S3_OBJECT_PARAMETERS = {"CacheControl": "max-age=86400"}
 
-STATICFILES_DIRS = [os.path.join(BASE_DIR, "eye_of_providence/static")]
+STATICFILES_DIRS = [os.path.join(BASE_DIR, "eye_of_providence/static/")]
 STATIC_URL = "https://{}/".format(AWS_S3_CUSTOM_DOMAIN)
 AWS_FACE_LOCATION = "faces"
 DEFAULT_FACE_STORAGE = "paradiso.storage_backends.FaceStorage"
