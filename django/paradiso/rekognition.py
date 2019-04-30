@@ -32,6 +32,8 @@ class VideoDetect:
         )
 
     def deleteFace(self, id):
+        if id == None:
+            return
         return self.rek.delete_faces(CollectionId=self.collectionId, FaceIds=[str(id)])
 
     def listFaces(self):

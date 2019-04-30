@@ -14,96 +14,167 @@
         object-fit: cover;
         border-radius: 50%;
       },
+      .column {
+        display: flex;
+      }
     </style>
   </head>
 
   <body>
     <script type="text/x-template" id="the-event-box-template">
-      <div class="box">
+      <div
+        class="box"
+      >
+        <div
+          class="has-text-centered has-text-weight-bold"
+        >
+        EVENTS
+        </span>
         <the-event-box-list
           :events="events"
           :selectedEvent="selectedEvent"
+          :analysing="analysing"
+          @clickEvent="updateSelectedEvent"
+          @delete="deleteEvent"
+          @analyse="analyseEvent"
         ></the-event-box-list>
 
-        <create-event-form @uploaded="getEvents"></create-event-form>
-
+        <the-event-box-upload-form
+          @uploaded="uploadWrapper"
+        ></the-event-box-upload-form>
       </div>
     </script>
 
     <script type="text/x-template" id="the-event-box-list-template">
-      <table class="table is-hoverable is-fullwidth is-striped">
-          <tbody>
-          <tr v-for="event in events">
-              <td
-                :class="{'is-selected': selectedEvent.id === event.id}"
-                @click="returnEvent(event)"
-              >
-                ${event.name}
-
-                <button
-                  v-if="selectedEvent.potential_faces === null && selectedEvent.id === event.id"
-                  class="button is-rounded is-warning is-inverted"
-                  @click="analyseEvent"
+        <table
+          class="table  is-fullwidth"
+        >
+            <tbody>
+            <tr
+              v-for="event in events"
+              :key="event.id"
+            >
+                <td
+                  :class="{'is-selected': isSelected(event), 'is-warning': needsAnalysis(event)}"
                 >
-                  <span class="icon">
-                    <i class="fas fa-eye"></i>
-                  </span>
-                </button>
+                  <button
+                    class="button is-rounded"
+                    :class="{'is-primary': isSelected(event), 'is-inverted': isSelected(event)}"
+                    @click="$emit('clickEvent', event)"
+                  >
+                  ${event.name}
+                  </button>
 
-                <button
-                  v-if="selectedEvent.id === event.id"
-                  class="button is-pulled-right is-rounded is-danger is-inverted"
-                  @click="deleteEvent"
-                >
-                  DEL
-                </button>
-              </td>
-          </tr>
-        </tbody>
-      </table>
+                  <button
+                    class="button is-pulled-right is-rounded is-warning"
+                    :class="{'is-loading': analysing}"
+                    v-if="isSelected(event)"
+                    @click="$emit('analyse', event)"
+                  >
+                    <span class="icon">
+                      <i class="fas fa-eye"></i>
+                    </span>
+                  </button>
+
+                  <button
+                    class="button is-pulled-right is-rounded is-danger is-inverted"
+                    v-if="isSelected(event)"
+                    @click="$emit('delete', event.id)"
+                  >
+                    <span class="icon">
+                      <i class="fas fa-trash"></i>
+                    </span>
+                  </button>
+                </td>
+            </tr>
+          </tbody>
+        </table>
+    </script>
+
+    <script type="text/x-template" id="the-event-box-upload-form-template">
+      <div
+        class="columns"
+      >
+        <div class="file column is-narrow">
+          <label class="file-label">
+            <input
+              class="file-input"
+              type="file"
+              ref="file"
+              @change="fetchFile"
+            >
+            <span class="file-cta">
+              <span class="file-label">
+                <i class="fas fa-upload"></i>
+              </span>
+            </span>
+          </label>
+        </div>
+        <div class="column is-narrow field has-addons">
+          <div class="control">
+            <input
+              class="input"
+              v-model="name"
+              placeholder="Name"
+            >
+          </div>
+          <div
+            class="control"
+          >
+            <a
+              :class="{'is-loading': uploading, 'is-primary': (file && name)}"
+              :disabled="!(file && name)"
+              class="button"
+              @click="upload"
+            >
+              Submit
+            </a>
+          </div>
+        </div>
+      </div>
+
     </script>
 
     <script type="text/x-template" id="the-information-box-template">
-      <div class="box columns is-multiline is-mobile">
-        <the-information-box-video
-          :video="selectedVideo"
-        >
-        </the-information-box-video>
+      <div
+        class="box tile is-vertical is-ancestor"
+      >
+          <div
+            class="tile is-parent"
+          >
+            <the-information-box-video
+              :video="selectedVideo"
+            ></the-information-box-video>
+          </div>
 
-        <the-information-box-guest-grid
-          :guests="guests"
-          :selectedGuests="selectedGuests"
-          :selectedVideo="selectedVideo"
-        >
-        </the-information-box-guest-grid>
-
-        <create-guest-form
-          @uploaded="getGuests"
-        ></create-guest-form>
+          <div
+            class="tile is-parent"
+          >
+            <the-information-box-guest-grid
+              :selectedGuests="selectedGuests"
+              :selectedVideo="selectedVideo"
+              @delete="deleteGuest"
+            ></the-information-box-guest-grid>
+          </div>
       </div>
     </script>
 
     <script type="text/x-template" id="the-information-box-guest-grid-template">
-      <div class="tile is-child">
-        <template
-          v-if="isVideoSelected"
+      <div
+        class="tile is-child columns is-centered is-multiline"
+      >
+        <div
+          class="column is-narrow has-text-centered has-text-weight-semibold"
+            v-for="guest in selectedGuests"
+            :key="guest.name"
         >
-          <figure
-            v-for="guest in guests"
-            class="column is-one-quarter">
-              <img class="image test is-128x128" :src="guest.photo">
-          </figure>
-        </template>
-
-        <template
-          v-else
-        >
-          <figure
-            v-for="guest in guests"
-            class="column is-one-quarter">
-              <img v-if="selectedGuests.includes(guest.name)" class="image test is-128x128" :src="guest.photo">
-          </figure>
-        </template>
+              <img
+                class="image test is-128x128"
+                @click="$emit('delete', guest.name)"
+                :src="guest.photo"
+              >
+                  ${guest.name}
+        </div>
       </div>
     </script>
 
@@ -111,8 +182,8 @@
       <div
         v-if="video"
         :key="video"
-        class="tile is-child"
         style="position: relative;padding-bottom: 56.25%; /* 16:9 */padding-top: 25px;height: 0;background: black"
+        class="tile is-child"
       >
         <video
           style="position: absolute;top: 0;left: 0;width: 100%;height: 100%;"
@@ -120,33 +191,6 @@
         >
           <source :src="video" type="video/mp4">
         </video>
-      </div>
-    </script>
-
-    <script type="text/x-template" id="create-event-form-template">
-      <div class="container">
-        <div class="">
-          <input class="input" v-model="newEvent.name" placeholder="Event Name">
-          <input class="file"type="file" ref="video" @change="fetchVideo">
-
-          <button :class="{'is-loading': uploading}"class="button is-primary" @click="uploadEvent">
-            Submit
-          </button>
-        </div>
-      </div>
-    </script>
-
-
-    <script type="text/x-template" id="create-guest-form-template">
-      <div class="container">
-        <div class="">
-          <input class="input" v-model="newGuest.name" placeholder="Guest Name">
-          <input class="file" type="file" ref="photo" @change="fetchPhoto">
-
-          <button :class="{'is-loading': uploading}"class="button is-primary" @click="uploadGuest">
-            Submit
-          </button>
-        </div>
       </div>
     </script>
 
@@ -166,49 +210,66 @@
       <section class="section">
         <div class="container">
           <div class="columns">
-            <div class="column is-one-third">
+            <div class="column is-narrow">
               <the-event-box
+                :selected-event="selectedEvent"
                 @select="selectEvent"
+                @uploaded="updateGuests()"
               >
               </the-event-box>
             </div>
 
             <div class="column">
               <the-information-box
+                ref="informationBox"
                 :selected-event="selectedEvent"
-                >
+              >
               </the-information-box>
             </div>
           </div>
         </div>
-      </div>
+      </section>
     </div>
 
     <!-- VUE SRC -->
     <script type="application/javascript">
 
-      Vue.component('create-event-form', {
-        template: '#create-event-form-template',
+
+      Vue.component('the-event-box-upload-form', {
+        template: '#the-event-box-upload-form-template',
         delimiters: ['${','}'],
         data () {
           return {
-            newEvent: {},
+            name: null,
+            file: null,
             uploading: false,
+            fileType: null
           }
         },
         methods: {
-          fetchVideo: function() {
-            this.newEvent.video = this.$refs.video.files[0]
+          fetchFile: function() {
+            this.file = this.$refs.file.files[0]
+            this.fileType = this.file.type.split("/")[0]
           },
-          uploadEvent: async function() {
-            this.uploading = true;
+          upload: async function() {
+            this.uploading = true
+            endpoint = null
 
-            let formData = new FormData();
-            formData.append('name', this.newEvent.name);
-            formData.append('video', this.newEvent.video);
+            let formData = new FormData()
+            formData.append('name', this.name)
+
+            if (this.fileType === "image"){
+              formData.append('photo', this.file)
+              endpoint = 'guest'
+            } else if (this.fileType === "video"){
+              formData.append('video', this.file)
+              endpoint = 'event'
+            } else {
+              alert("try again")
+            }
 
             try{
-              await axios.post( '/api/event/',
+              await axios.post( '/api/' + endpoint + '/',
                 formData,
                 {
                   headers: {
@@ -219,59 +280,25 @@
             } catch(error) {
               console.error(error)
             }
+            this.file=null
+            this.name=null
             this.uploading = false
-            this.newEvent = {}
             this.$emit("uploaded")
           },
         },
-      });
+      })
 
-
-      Vue.component('create-guest-form', {
-        template: '#create-guest-form-template',
-        delimiters: ['${','}'],
-        data () {
-          return {
-            newGuest: { 'name': null, 'photo': null },
-            uploading: false,
-          }
-        },
-        methods: {
-          fetchPhoto: function() {
-            this.newGuest.photo = this.$refs.photo.files[0]
-          },
-          uploadGuest: async function() {
-            this.uploading = true;
-
-            let formData = new FormData();
-            formData.append('name', this.newGuest.name);
-            formData.append('photo', this.newGuest.photo);
-
-            try{
-              await axios.post( '/api/guest/',
-                formData,
-                {
-                  headers: {
-                    'Content-Type': 'multipart/form-data'
-                  }
-                }
-              )
-            } catch(error) {
-              console.error(error)
-            }
-            this.$emit("uploaded")
-            this.uploading = false
-          },
-        },
-      });
 
       Vue.component('the-event-box', {
         template: '#the-event-box-template',
         delimiters: ['${','}'],
+        props: {
+          selectedEvent: Object
+        },
         data () {
           return {
             events: [],
-            selectedEvent: {},
+            analysing: false
           }
         },
         mounted () {
@@ -280,28 +307,37 @@
         methods: {
           getEvents: async function() {
             try {
-              const response = await axios.get('/api/event');
-              this.events = response.data;
+              const response = await axios.get('/api/event')
+              this.events = response.data
             } catch (error) {
-              console.error(error);
+              console.error(error)
             }
           },
-          deleteEvent: async function() {
-            const response = await axios.delete('/api/event/' + this.selectedEvent.id)
-            this.selectedEvent = {}
+          deleteEvent: async function(id) {
+            const response = await axios.delete('/api/event/' + id)
+            this.unselectEvent()
             this.getEvents()
           },
-          analyseEvent: async function() {
-            const response = await axios.get('/api/event/' + this.selectedEvent.id + '/analyse')
+          analyseEvent: async function(event) {
+            this.analysing = true
+            const response = await axios.get('/api/event/' + event.id + '/analyse')
+            this.analysing = false
+            this.unselectEvent()
             this.getEvents()
           },
-          returnEvent: function(event) {
+          updateSelectedEvent: function(event) {
             if (this.selectedEvent == event){
-              this.selectedEvent = {}
+              this.unselectEvent()
             } else {
-              this.selectedEvent = event;
+              this.$emit('select', event)
             }
-              this.$emit('select', this.selectedEvent)
+          },
+          unselectEvent: function(){
+              this.$emit('select', {})
+          },
+          uploadWrapper: function(){
+              this.$emit('uploaded')
+              this.getEvents()
           }
         },
       })
@@ -309,62 +345,45 @@
       Vue.component('the-event-box-list', {
         template: '#the-event-box-list-template',
         delimiters: ['${','}'],
-        data () {
-          return {
-            events: [],
-            selectedEvent: {},
-          }
-        },
-        mounted () {
-          this.getEvents()
+        props: {
+          events: Array,
+          selectedEvent: Object,
+          analysing: Boolean
         },
         methods: {
-          getEvents: async function() {
-            try {
-              const response = await axios.get('/api/event');
-              this.events = response.data;
-            } catch (error) {
-              console.error(error);
-            }
+          isSelected: function(event){
+            return this.selectedEvent.id == event.id
           },
-          deleteEvent: async function() {
-            const response = await axios.delete('/api/event/' + this.selectedEvent.id)
-            this.selectedEvent = {}
-            this.getEvents()
+          isAnalysed: function(event){
+            return this.selectedEvent.potential_faces === null
           },
-          analyseEvent: async function() {
-            const response = await axios.get('/api/event/' + this.selectedEvent.id + '/analyse')
-            this.getEvents()
-          },
-          returnEvent: function(event) {
-            if (this.selectedEvent == event){
-              this.selectedEvent = {}
-            } else {
-              this.selectedEvent = event;
-            }
-              this.$emit('select', this.selectedEvent)
+          needsAnalysis: function(event){
+            return (event.potential_faces === null) || (event.known_guests.length === 0)
           }
-        },
+        }
       })
 
       Vue.component('the-information-box', {
         template: '#the-information-box-template',
         delimiters: ['${','}'],
+        data () {
+          return {
+            guests: []
+          }
+        },
         props: {
           selectedEvent: Object,
         },
         computed: {
           selectedGuests: function() {
-            return this.selectedEvent.known_guests
+            if(this.selectedVideo == null){
+              return this.guests
+            }
+            return this.getSelectedGuests()
           },
           selectedVideo: function() {
             return this.selectedEvent.video
-          }
-        },
-        data () {
-          return {
-            guests: []
-          }
+          },
         },
         mounted () {
           this.getGuests()
@@ -372,11 +391,36 @@
         methods: {
           getGuests: async function() {
             try {
-              const response = await axios.get('/api/guest');
-              this.guests = response.data;
+              const response = await axios.get('/api/guest')
+              this.guests = response.data
             } catch (error) {
-              console.error(error);
+              console.error(error)
             }
+          },
+          getSelectedGuests: function() {
+            //jesus christ
+            var list1 = this.guests
+            var list2 = this.selectedEvent.known_guests
+            var isUnion = true
+            var result = [];
+
+            for (var i = 0; i < list1.length; i++) {
+              var item1 = list1[i]
+              found = false;
+
+              for (var j = 0; j < list2.length && !found; j++) {
+                found = item1.name === list2[j];
+              }
+
+              if (found === !!isUnion) {
+                result.push(item1);
+              }
+            }
+            return result;
+          },
+          deleteGuest: async function(name) {
+            const response = await axios.delete('/api/guest/' + name)
+            this.getGuests()
           },
         }
       })
@@ -385,7 +429,6 @@
         template: '#the-information-box-guest-grid-template',
         delimiters: ['${','}'],
         props: {
-          guests: Array,
           selectedGuests: Array,
           selectedVideo: String,
         },
@@ -413,20 +456,14 @@
           }
         },
         methods: {
-          getGuests: async function() {
-            try {
-              const response = await axios.get('/api/guest');
-              this.guests = response.data;
-            } catch (error) {
-              console.error(error);
-            }
-          },
           selectEvent: function(event) {
             this.selectedEvent = event
           },
-
+          updateGuests: function() {
+            this.$refs.informationBox.getGuests()
+          }
         },
-      });
+      })
     </script>
   </body>
 </html>
